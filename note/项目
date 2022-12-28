@@ -1,0 +1,279 @@
+
+
+[9/Jun/2015:01:58:09 +0800] 10.10.10.10 - 1542 "-" "GET http://www.aliyun.com/index.html" 200 191 2830 MISS "Mozilla/5.0 (compatible; AhrefsBot/5.0; +http://example.com/robot/)" "text/html"
+
+
+行为数据： 业务指标统计出来   Hive/Spark SQL/Impala/Presto
+
+数据清洗的时候：把该解析出来的东西全部解析完毕  ==> 表  ==> SQL
+	规整好 加载到Hive表中去即可
+
+
+[9/Jun/2015:01:58:09 +0800]  ==> 解析出来
+
+按分区进行划分    天   小时  半小时
+	分区能为我们带来什么
+
+10.10.10.10   ip==> 省份、城市、运营商...
+
+
+GET http://www.aliyun.com/index.html?a=b&c=d
+	请求方式 
+	www.aliyun.com：domain
+	http：协议   http  https
+	/index.html  path
+	a=b&c=d  请求参数
+
+
+
+数据清洗：
+	日志中每一行数据  对应的都需要进行相应的处理(该截取的就截取、该过滤的就过滤)
+	MapReduce程序来完成数据清洗的功能
+
+	脏数据是非常常见，严格&非严格
+	数据质量：你每天的数据清洗作业，进来多少数据？清洗完毕之后有多少数据？
+
+
+创建Hive表
+
+load data inpath '/project/out' overwrite into table user_access partition(d='20231028');
+
+create table ods_access(
+ip string,
+proxy_ip string,
+response_time bigint,
+referer string,
+method string,
+http_code string,
+request_size bigint,
+response_size bigint,
+cache string,
+province string,
+city string,
+isp string,
+http string,
+domain string,
+path string,
+params string,
+year string,
+month string,
+day string
+) partitioned by (d string)
+row format delimited fields terminated by '\t';
+
+
+按天分区：
+	统计每个域名的访问次数、流量和
+ 
+
+domain				cnt	    traffics
+coding.imooc.com	26873	40272361
+pktest1.com			5317	7822819
+pktest2.com			5330	7938082
+pktest3.com			5337	8016662
+
+
+coding.imooc.com	26873	40272361	20231028
+pktest1.com	5317	7822819	20231028
+pktest2.com	5330	7938082	20231028
+pktest3.com	5337	8016662	20231028
+
+
+select * from domain_cnt_traffics;
+
+
+create table dws_domain_cnt_traffic_d(
+domain string,
+cnt bigint,
+traffics bigint
+)partitioned by (d string)
+stored as orc;
+
+insert overwrite table test.dws_domain_cnt_traffic_d partition(d)
+select domain, count(1) cnt, sum(response_size) traffics from dwd_access where d='20231028' group by domain;
+
+
+按月：
+	别再通过dwd去算了
+	基于dws去算了
+		dws_d已经算出来的
+		dws_m 就是基于dws_d去累加就行了
+
+
+ads： 
+	按天级别的，其实现在已经算出来的
+	按月的话，dws不去算月也可以，ads对dwd_d来做聚合/累加就可以的
+
+
+create table domain_cnt_traffics(
+domain string,
+cnt bigint,
+traffics bigint
+)partitioned by (d string)
+row format delimited fields terminated by '\t';
+
+
+insert overwrite table domain_cnt_traffics partition(d='20231028')
+select domain, count(1) cnt, sum(response_size) traffics from user_access where d='20231028' group by domain;
+
+
+Hive JDBC API查询
+
+
+
+现在的统计是OK的，比较适合“小规模”（指标比较少）的处理
+
+	天，再细化一下，按小时走，按五分钟的粒度进行指标的统计
+	select 5min,.....,count(1), sum(...) from xx group by 5min,.....
+	select h,.....,count(1), sum(...) from xx group by h,.....
+	select d,.....,count(1), sum(...) from xx group by d,.....
+	select m,.....,count(1), sum(...) from xx group by m,.....
+
+粒度、量级  ===> 
+
+
+==》数仓
+	大数据化  云化   ==> 使用大数据的分布式的计算框架 来解决原来的关系型数据扛不住的场景
+
+
+数仓的分层
+	每家公司、每个团队的叫法不一定一样的，但是都是大同小异的
+	ODS、贴源层：存放原始数据，加载日志等行为数据或其他数据，不做处理
+		raw：ETL处理(MR/HIVE/SPARK/FLINK...)  ==> ODS  ==> 大宽表
+	CDM: DIM  DWD DWS
+	ADS、APP：
+
+关于数仓分层的存储：
+	每一层一个数据库？  可以
+	DB: PK_DW  表采用规范定义
+		ods_xxx
+		dwd_xxx
+		dim_xxx
+		dws_xxx
+		ads_xxx
+		tmp_xxx
+	层到层的脚本命名规范
+		ods2dwd_.....sh
+		ods_xxx_to_dwd_xxx.sh
+
+raw  存放在HDFS上的数据  
+ODS：raw
+DWD：ODS
+
+优化：存储格式、压缩
+raw ==> ods ==> dwd 
+text	etl txt     compression\storage
+text    etl compression\storage
+
+ods: 可以是压缩的，也可以是原生的文本格式
+	如果是文本的，可以通过压缩等的处理，将数据写入dwd层
+
+
+
+非常好的规范， 什么层存放什么数据
+	复杂的流程 ==> 简单化  标准化      就是把一个复杂的流程拆分成每个层级相对简单的逻辑
+	减少重复性的劳动
+
+
+
+时间的shell操作
+	对于大数据人员：linux是必须要会的，shell的一些写法和处理也是必备的技能
+
+
+HDFS的目录
+	原始日志层：	        
+		/pk/dw/raw/[业务线名称]/yyyyMMdd
+			/pk/dw/raw/access/20231028
+			/pk/dw/raw/access/20231029
+
+			/pk/dw/raw/x/20231029
+
+	ODS层：
+		/pk/dw/ods/[业务线名称]/d=yyyyMMdd
+
+hadoop jar /home/hadoop/lib/pk-hadoop-1.0.jar com.pk.project.mapreduce.DataCleanAppV2 /pk/dw/raw/access/$time /pk/dw/ods/access/d=$time
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+core-site.xml
+<property>
+	<name>io.compression.codecs</name>
+	<value>
+		org.apache.hadoop.io.compress.BZip2Codec,
+		org.apache.hadoop.io.compress.DefaultCodec,
+		org.apache.hadoop.io.compress.GzipCodec,
+		org.apache.hadoop.io.compress.SnappyCodec
+	</value>
+</property>
+
+
+mapreduce-site.xml
+<property>
+	<name>mapreduce.output.fileoutputformat.compress</name>
+	<value>true</value>
+</property>
+
+
+<property>
+	<name>mapreduce.output.fileoutputformat.compress.codec</name>
+	<value>org.apache.hadoop.io.compress.BZip2Codec</value>
+</property>
+
+<property>
+	<name>mapreduce.map.output.compress</name>
+	<value>true</value>
+</property>
+
+<property>
+	<name>mapreduce.map.output.compress.codec</name>
+	<value>org.apache.hadoop.io.compress.BZip2Codec</value>
+</property>
+
+
+create table page_views_rcfile(
+track_time string,
+url string,
+session_id string,
+referer string,
+ip string,
+user_id string,
+city_id string
+)row format delimited fields terminated by '\t'
+stored as rcfile
+;
+
+
+load data local inpath '/home/hadoop/data/page_views.dat' overwrite into table page_views;
+
+
+ods  ==> dwd   存储格式 压缩
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

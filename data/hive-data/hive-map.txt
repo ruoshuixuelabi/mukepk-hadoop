@@ -1,0 +1,4 @@
+1,zhangsan,father:xiaoming#mother:xiaohuang#brother:xiaoxu,28
+2,lisi,father:laoli#mother:laohuang#brother:xiaoxiaoli,22
+3,wangwu,father:laowang#mother:laozhang#sister:xiaozhang,29
+4,zhaoliu,father:laozhao#mother:laobi,26

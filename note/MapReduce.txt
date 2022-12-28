@@ -1,0 +1,520 @@
+    MapReduce是什么
+        是一个软件框架：就是一个分布式的计算框架 Spark Hive Flink....
+            "easily" writing applications
+            process vast amounts of data（T级别）
+            in-parallel ： 并行（大数据分布式框架必备）  vs 串行
+            commodity hardware
+            reliable, fault-tolerant（大数据分布式框架必备）
+
+        如果没有MR这种框架，我们自己写代码来完成？？？
+
+        MR屏蔽了很多分布式开发代码的麻烦点，很多都为我们封装好了
+            自带/默认的组件  +  我们的业务逻辑  ==> 分布式计算作业
+        对于我们来说，开发分布式作业其实你是感知不到的，开发时就和写单机程序是一样的
+
+
+    MR的优缺点
+        优点：
+            编码角度：按照MR的核心组件规范，其实就是去实现MR提供的抽象类或者是接口
+            扩展角度：计算的资源情况
+                HDFS：分布式的文件存储系统
+                    File==>block==>DNs
+                    存储空间不够了，加机器可以很方便的达到水平扩展的能力
+                计算资源：Core + Memory
+                    加机器可以很方便的达到水平扩展的能力
+            容错角度：Node挂了，MR框架会将这个Node上的作业转移到其他节点上去运行
+            海量数据的离线计算/批计算：
+                离线/批计算：
+                实时/流计算：
+        缺点：
+            不适合实时计算
+            不适合迭代次数多的计算
+                job1 ==> job2 ==> job3 ==> job4
+
+
+
+
+
+
+通过官方的wordcount案例来了解mr作业
+wordcount：词频的统计   是一个非常经典的例子  一定要深入掌握的
+    求每个单词出现的次数
+    TokenizerMapper
+    IntSumReducer
+    main：Driver
+
+
+wc.data
+    pk,pk,pk
+    zhangsan,zhangsan
+    lisi
+
+可以通过Java IO把文件内容读取进来，一行一行的读取数据
+pk,pk,pk 按照指定的分隔符对这一行数据的内容进行拆分， 按照逗号
+
+String[] splits = line.split(",")
+==>  pk   pk   pk
+
+key:value ==> Map<KEY,VALUE>
+
+
+map.get("pk") ==> pk -> 1
+              ==> 1 + 1   2+1
+
+分而治之：   先分         再合
+         MapTask       ReduceTask
+         (word,1)      (word, N)
+
+
+
+
+
+
+
+
+MapReduce作业的编程规范
+    自定义的Mapper
+        extends Mapper<Object, Text, Text, IntWritable>(MR框架为我们提供的核心组件)
+            Object, Text：Mapper的输入数据KEY的类型，输入数据VALUE的类型
+            Text, IntWritable：Mapper的输出数据KEY的类型，输出数据VALUE的类型
+        重写public void map 方法：自己的业务逻辑
+
+    自定义的Reducer
+        extends Reducer<Text,IntWritable,Text,IntWritable>
+            Text,IntWritable：Reducer的输入数据KEY的类型，输入数据VALUE的类型
+                其实就是Mapper输出的KEY和VALUE的类型
+            Text,IntWritable：Reducer的输出数据KEY的类型，输出数据VALUE的类型
+        重写public void reduce方法：自己的业务逻辑
+
+    自定义的Driver：是一个八股文编程，面向套路的编程
+        通过Driver把整个MR作业串起来
+            获取Job
+            设置作业的class
+            设置自定义的Mapper类
+            设置自定义的Reducer类
+            设置自定义的Mapper类输出的KEY VALUE类型
+            设置自定义的Reducer类输出的KEY VALUE类型
+            设置作业的输入数据目录
+            设置作业的输出数据目录
+            作业的提交
+
+在MR编程中会有Mapper、Reducer的输入输出KEY、VALUE的类型
+Text,IntWritable,Text,IntWritable
+
+Java中数据类型  Hadoop的序列化的类型(Writable)
+String      ==>    Text
+Int         ==>    IntWritable
+Long/Double/Float ==> LongWritable/DoubleWritable/FloatWritable
+Null        ==>    NullWritable
+Byte        ==>    ByteWritable
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    需求：统计给定的文件中输出每一个单词出现的总次数
+
+    pk,pk,pk
+    hello,hello
+    world
+    ==>
+    pk,3
+    hello,2
+    world,1
+
+    Mapper
+        读入一行行的数据，按照分隔符对一行行的数据进行切分
+        按照<单词,1>的格式输出
+        Maps input key/value pairs to a set of intermediate key/value pairs
+            input key/value pairs
+                <0, pk,pk,pk>  ==> <pk,1> <pk,1> <pk,1>
+                <9, hello,hello> ==> <hello,1> <hello,1>
+                <21, world>     ==> <world,1>
+            setup: Called once at the beginning of the task.
+                初始化操作：打开connection
+            map：
+            cleanup: Called once at the end of the task.
+                资源释放操作： 关闭connection
+                三个文件，MR读进来数据的时候是有三个task
+            run方法定义好这三个方法的执行顺序
+    Reducer
+        <单词,N次>
+        Reduces a set of intermediate values which share a key to a smaller set of values.
+        setup:
+        reduce:
+        cleanup:
+        run：
+    Driver
+        把所有相关的东西都串起来
+
+
+
+
+    设计模式中的模板方法模式
+        意图
+            定义一个操作中算法的轮廓/骨架，而将一些步骤的实现推迟到子类中去
+                run {
+                    setup
+                    map
+                    cleanup
+                }
+
+
+
+
+
+    序列化
+        对象 ==> 字节序列  ： 存储到磁盘或者网络传输
+
+        MR、Spark、Flink：分布式的执行框架   必然会涉及到网络传输
+
+    反序列化
+        字节序列 ==> 对象
+
+
+    Java中的序列化：Serializable
+    为什么Hadoop中还定义一套序列化呢？Spark中也使用了其他的序列化框架(kyro)
+    Hadoop中序列化特点（校招：选择题）
+        紧凑
+        速度
+        扩展性
+        互操作
+
+
+    Hadoop中Writable接口中有几个方法？方法名是什么？
+
+    在Hadoop中KEY和VALUE都是要实现Writable接口的
+    如果你的KEY要支持排序，那么需要实现WritableComparable接口
+    public interface WritableComparable<T> extends Writable, Comparable<T> {
+
+
+    需求：统计每个手机号耗费的总上行流量、总下行流量、总流量
+        提取的字段：手机号、上行流量(倒数第三个字段)、下行流量(倒数第二个字段)
+        手机号，该手机号对应的上行流量求和，该手机号对应的下行流量求和
+        select phone,sum(上行流量),sum(下行流量) from t group by phone;
+
+        思考：
+            Mapper端的输入KEY，VALUE类型   <LongWritable, Text>
+            Mapper端的输出KEY，VALUE类型   <A, B>   A：Text   B：自定义类型
+            Reducer端的输入KEY，VALUE类型  <A, B>   A：Text   B：自定义类型
+            Reducer端的输出KEY，VALUE类型  <X, Y>   X：？？？  Y：？？？
+
+        回顾WC：每个单词出现的次数
+            select word,count(1) cnt from t group by word;
+            Mapper: <offset, line> ==> <word, 1>...
+                Text,IntWritable
+            Reducer: <word,<1,1,1>> ==> <word, 3>
+
+    自定义序列化类步骤
+        实现Writable接口
+        默认无参构造
+        重写write和readFields方法，一定要注意顺序问题
+        toString方法：并不是一定要按照某种参考方式，而是要根据你的功能需求来自定义
+        KV类型都实现实现Writable接口，如果K需要排序，那么K需要实现WritableComparable接口
+
+
+    MapReduce框架去实现时，一定要思考清楚输入/输出数据的数据类型
+        Mapper: (k1, v1) ==> (k2, v2)
+        Reducer: (k2,v2) ==> (k3,v3)
+
+
+
+
+    InputFormat
+        HDFS：Block为单位进行存储
+        MR：是以InputSplit为单位的  是一个逻辑上的概念
+            InputSplit是交给MapTask来运行的
+
+    InputFormat ==> Mapper  ==> Shuffle  ==> Reducer ==> OutputFormat
+        输入数据是如何读取进来的？  InputFormat
+        InputFormat<K, V>
+
+        我们要重点关注：InputSplit和Mapper的关系
+            前提：文件很小  一个文件对应一个InputSplit，也就是对应一个Mapper
+        涉及到一个并行度的问题
+
+    MR中MapTask并行度是和InputSplit的个数直接挂钩的
+    1G 8个Task  100M 8个Task？
+    在MR中作业中，MapTask的个数越多越好？  X
+    MapTask：JVM
+
+    一个MR作业，Mapper阶段的并行度是由InputSplit（切片）的个数来决定
+
+
+
+
+
+
+
+
+
+
+
+
+
+    FileInputFormat
+        (日志)数据
+        TextInputFormat
+        KeyValueTextInputFormat
+        NLineInputFormat
+
+
+    统计输入文件中每一行数据的第一个单词相同的行数
+    KeyValueTextInputFormat
+
+
+    NLineInputFormat
+        是按照行数进行切片，不会再去根据Block的大小来切片
+        切片数 =  总行数  /  N行   (+1)
+
+
+    使用MR去读取MySQL/Oracle/DB2表中的数据
+    MR：Mapper + Reducer
+        在MR中，不一定需要Reducer，换句话说，在一个MR作业中，可能只要Mapper
+    MySQL  <== Mapper  ==> 输出
+
+
+
+
+
+
+
+
+    分区：Partitioner
+        Kafka、Spark、Flink都有
+        根据指定的条件将结果输出到不同的文件中
+
+    public abstract class Partitioner<KEY, VALUE> {
+        public abstract int getPartition(KEY key, VALUE value, int numPartitions);
+    }
+
+    public class HashPartitioner<K, V> extends Partitioner<K, V> {
+      public int getPartition(K key, V value,
+                              int numReduceTasks) {
+        return (key.hashCode() & Integer.MAX_VALUE) % numReduceTasks;
+      }
+    }
+
+
+
+    MR中的排序问题
+        KEY：是要排序的  Writable + Comparable
+        LongWritable implements WritableComparable<LongWritable>
+        Text extends BinaryComparable implements WritableComparable<BinaryComparable>
+        IntWritable implements WritableComparable<IntWritable>
+
+        MapTask/ReduceTask会按照key进行排序，MR默认的
+        默认就是按照字典序排的
+
+        全排序：输出只有一个文件(reducer)，如果遇到大数据量，就是瓶颈
+            2reducer:  1 3 5     2 6
+            Hive：order by xxx
+        分区内排序：Partitioner  分区内的数据是排序了的  可以有多个reducer
+            Hive：sort by  xxx
+        二次排序：
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+OutputFormat
+    MR关于输出的最顶层类
+
+
+
+
+
+使用MapReduce完成重要场景
+
+    group by
+        select deptno, count(1) cnt from emp group by deptno;
+
+        Mapper:
+            读取数据，按照分隔符拆分，取出deptno字段
+            <deptno, 1>
+            <IntWritable, IntWritable>
+        Reducer:
+            相同的deptno都会分到一个组
+            <deptno, <1,1,1,1...>>
+            <IntWritable, IntWritable>
+        是不是WC的变种？ yes
+
+
+
+
+
+
+
+
+    distinct
+        去重功能
+
+        Mapper：
+            读取每一行数据，按照分隔符进行拆分
+            MR框架按照key来进行数据的shuffle的
+            <Text, NullWritable>
+
+        Reducer：
+            相同的key肯定在一个reduce中的
+            我们只关注key，根本不需要关注value
+            <Text, NullWritable>
+
+
+
+    join *****
+        select e.empno, e.ename, e.deptno, d.dname from emp e join dept d on e.deptno=d.deptno;
+
+        ReduceJoin  CommonJoin  ShuffleJoin
+            ==> Shuffle
+
+        MapJoin   不会走shuffle
+
+        没有Reducer，意味着Mapper端就直接输出了
+        MR中，是可以没有Reducer
+
+
+
+
+
+
+基于MR进行开发的总结
+InputFormat
+    FileInputFormat TextInputFormat
+    KeyValueTextInputFormat  默认的分隔符是\t
+    NLineInputFormat  N行进行切片
+    DBInputFormat     数据库的操作
+Mapper
+    四个泛型参数问题
+    LongWritable： 该行数据的offset，不是行号
+    Text：数据
+    Text
+    IntWritable
+    map
+        map方法的签名以及入参是什么
+        完成我们自己的业务逻辑
+        生命周期方法
+Partitioner
+    分区
+    按照key的某种规则进行分区
+    HashPartitioner
+    分区数量和reducer数量的关系
+Comparable
+    KEY 都是要实现Writable接口
+    KEY 如果需要排序，那么必须要是WritableComparable接口
+    全局排序
+    分区排序
+    二次排序
+Combiner
+    是一个本地的Reducer
+    完成预聚合的功能，减少数据传输
+    是运行在MapTask端
+    写法：重新写一个Reducer，要么复用已有的Reducer
+    前提以及不适用场景
+Reducer
+    四个泛型参数
+    Mapper端的输出是作为Reducer端的输入
+    Mapper端相同的key进入同一个Reducer
+    reduce：
+        reducer方法的签名以及入参是什么
+        完成我们自己的业务逻辑
+        生命周期方法
+OutputFormat
+    TextOutputFormat、FileOutputFormat
+    我们可以自定义自己的输出格式
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

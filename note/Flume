@@ -1,0 +1,257 @@
+Flume is a 
+distributed, 
+reliable, and available service 
+for efficiently 
+collecting,  收集   Event
+aggregating, 聚合   先把日志存储在某个地方  
+and moving   移动   目的地
+large amounts of log data. 
+
+A  --->  B
+
+It has a 
+simple  配置文件
+and 
+flexible architecture 灵活 
+based on streaming data flows
+
+
+源: Source
+某个地方： Channel memory  disk  kafka....
+目的地: Sink
+
+Flume就是一个针对日志数据进行收集汇总的一个框架   A --> B
+
+Flume：查字段  遇到什么查什么
+	一切要从官网出发
+
+
+2大场景
+离线
+	data ==> Flume ==> HDFS ==> 大数据分布式计算引擎
+实时
+	data ==> Flume ==> Kafka ==> Stream Engine
+
+
+data ==> Flume ==> Kafka ==> Stream Engine
+						 ==> Flume ==> HDFS ==> 大数据分布式计算引擎
+
+架构并不是堆砌框架
+
+竞品分析
+	Apache Flume： 顶级项目
+	ELK：logstash   beats（filebeat）
+	DataX： alibaba
+	Canal
+	Chukwa
+
+
+
+
+Flume的发展史
+	09/7 Flume 是从Cloudera诞生
+	10/11  0.9.2     Flume-OG
+	11/10  Flume-728  Flume-NG  ==> Apache Flume
+	12/7   Apache Flume 1.0
+	....
+	1.9
+
+
+三大核心组件
+收集：Source
+	从哪收集数据？？？
+	负责接收数据到Flume
+	Avro Source
+	Exec Source
+	Spooling Directory Source
+	Taildir Source  *****
+	Kafka Source
+
+
+聚合：Channel
+	通道，是一个临时存储的地方
+	Channel是介于Source和Sink之间的缓冲区
+
+	Memory Channel
+	Kafka Channel
+	File Channel
+
+	负责数据聚合/暂存，Event在Channel不会呆太长时间的，很快会被Sink消费掉的
+
+移动：Sink
+	读取Channel的数据，然后推送到各种不同的目的地去
+	HDFS Sink
+	Hive Sink
+	Logger Sink
+	Avro Sink
+	Kafka Sink
+	ES/HBase Sink
+
+	负责数据转移存储
+
+
+Agent中包含了最主要的三大组件：Source Channel Sink
+
+
+
+
+# example.conf: A single-node Flume configuration
+
+a1：Agent的名字
+
+需求：监听本机44444端口的数据 收集到终端打印出来
+# Name the components on this agent  定义agent中对应的三大组件的名字
+a1.sources = r1   数据源 Source
+a1.sinks = k1     目的地 Sink
+a1.channels = c1  缓存 Channel
+
+# Describe/configure the source  配置source
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = 0.0.0.0
+a1.sources.r1.port = 44444
+
+# Use a channel which buffers events in memory 配置channel
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Describe the sink   配置sink
+a1.sinks.k1.type = logger
+
+
+# Bind the source and sink to the channel  三大组件的流向组织
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+
+学习或者使用Flume最关键的就是agent的配置文件的编写
+可插拔的
+
+
+flume-ng agent \
+--name a1 \
+--conf $FLUME_HOME/conf \
+--conf-file /home/hadoop/config/example.conf \
+-Dflume.root.logger=INFO,console
+
+
+Event是Flume数据传输的基本单元
+
+	header：可选的
+	body：byte array
+
+
+
+
+
+使用Flume来完成生产上各种不同组合的使用
+Agent： 单个   多个组合(*****)
+
+
+需求：监听某个文件中的内容，收集到HDFS上去
+Source：
+	Linux中如何监听文件内容？？？
+	tail -F
+
+	Exec Source
+
+Channel：
+	Memory Channel
+
+Sink:
+	HDFS Sink
+
+需求：监听某个文件夹中的内容，收集到HDFS上去
+Source：
+	Spooling Directory Source
+
+Channel：
+	Memory Channel
+
+Sink:
+	HDFS Sink
+
+需求：监听某个文件夹中的内容，收集到HDFS上去，并指定分区
+
+(*****)需求：监听多个文件的内容，输出到终端(配置到HDFS)
+	断点续传
+
+
+a1.sources = r1
+a1.sinks = k1 
+a1.channels = c1
+
+a1.sources.r1.type = TAILDIR
+a1.sources.r1.filegroups = f1 f2
+a1.sources.r1.filegroups.f1 = /home/hadoop/data/taildir/test1/example.log
+a1.sources.r1.filegroups.f2 = /home/hadoop/data/taildir/test2/.*log.*
+
+a1.channels.c1.type = memory
+
+a1.sinks.k1.type = logger
+
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+exec-memory-avro.conf
+
+
+
+
+
+
+
+flume-ng agent \
+--name exec-memory-avro \
+--conf $FLUME_HOME/conf \
+--conf-file /home/hadoop/config/exec-memory-avro.conf \
+-Dflume.root.logger=INFO,console
+
+flume-ng agent \
+--name a1 \
+--conf $FLUME_HOME/conf \
+--conf-file /home/hadoop/config/channel-selector.conf \
+-Dflume.root.logger=INFO,console
+
+for i in {1..100}; do echo "pk $i" >> /home/hadoop/data/avro.data; sleep 0.1; done
+
+
+
+
+
+
+
+
+
+
+failoversink-2.conf
+
+
+
+
+flume-ng agent \
+--name collector2 \
+--conf $FLUME_HOME/conf \
+--conf-file /home/hadoop/config/failoversink-2.conf \
+-Dflume.root.logger=INFO,console
+
+flume-ng agent \
+--name collector1 \
+--conf $FLUME_HOME/conf \
+--conf-file /home/hadoop/config/failoversink-1.conf \
+-Dflume.root.logger=INFO,console
+
+flume-ng agent \
+--name agent1 \
+--conf $FLUME_HOME/conf \
+--conf-file /home/hadoop/config/failoversink.conf \
+-Dflume.root.logger=INFO,console
+
+
+
+
+
+
+
+
+

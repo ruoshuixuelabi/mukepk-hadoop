@@ -1,0 +1,254 @@
+HDFS: Hadoop Distributed File System
+	运行在commodity hardware(廉价)的机器
+	fault-tolerant：分布式框架中必备
+
+
+Assumptions and Goals
+	Hardware Failure
+		由于Hadoop可以部署在廉价的机器上
+		所以可以能遇到一些问题
+		如何进行错误检测、自动快速的恢复  这是HDFS架构的核心
+	Streaming Data Access
+		HDFS is designed more for batch processing rather than interactive use by users
+		批处理/离线处理
+		high throughput of data access rather than low latency of data access
+		高吞吐量  而不是  低延迟
+	Large Data Sets
+		大数据集
+		带宽、大集群
+	Simple Coherency Model
+		write-once-read-many  一次写入多次读取
+		将数据写入到HDFS中，对应的就是文件
+		采用分布式计算框架等对这份数据进行多次处理
+		不能对文件的任意位置的数据进行修改  
+		insert update delete ...  
+	Moving Computation is Cheaper than Moving Data
+		移动计算优于移动数据
+
+		NODE1  NODE2  NODE3
+		data           把数据移动到NODE3上来
+		作业			   作业
+	Portability Across Heterogeneous Hardware and Software Platforms
+
+
+
+
+HDFS架构 *****
+	NameNode：NN
+		file system namespace 文件系统命名空间
+		执行文件系统的命名空间操作：打开、关闭、重命名文件或者路径
+		记录数据块对应的DN
+
+	DataNode: DN
+		存储数据
+		负责客户端对文件的读写服务
+		执行NN发起的创建、删除、副本指令
+
+	a master/slave architecture  
+	一个老大/多个小弟
+
+	a file is split into one or more blocks and these blocks are stored in a set of DataNodes
+	一个文件会被拆分成1或者多个block(块)，然后块是存储在DN上
+		块是有大小的  10M
+		15M的文件：对应有2个块
+		副本系数：3  每个块会存三份
+
+		35M   10M
+		10  10  10  5
+
+
+
+
+面试题
+HDFS架构及各个组件的职责
+	NN
+		维护和管理文件系统的命名空间
+		副本策略
+		Block的映射信息
+		处理客户端读写请求
+
+	DN
+		存储Block
+		真正执行数据块的读写操作
+
+	Client
+		与NN交互，获取到文件的元数据信息
+		才会与DN交互，执行数据块的读写操作
+		管理HDFS
+
+	SNN：Secondary NameNode
+		不是NN的热备
+		分担一些NN工作量： 定期合并FsImage  Edits
+
+Block
+	大小，128M
+
+
+HDFS优缺点
+	优点
+		构建在廉价机器上
+		多副本：高容错性
+		存大数据：前提你的空间够的
+
+	缺点
+		HDFS不适合存小文件
+		支持追加，不支持文件的随机修改
+		不适合低延迟的操作
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+HDFS部署
+	下载：官网download
+	解压：tar -zxvf hadoop-3.3.2.tar.gz -C ~/app/
+
+	hadoop-3.3.2
+		bin：脚本
+		logs：存放hadoop的相关日志  out  log
+		sbin：脚本
+		etc/hadoop：存放hadoop相关的所有配置文件
+		share/hadoop：存放官方自带的一些例子等等
+
+	配置：
+		etc/hadoop/hadoop-env.sh
+			JAVA_HOME=/home/hadoop/app/jdk1.8.0_202/
+
+		etc/hadoop/core-site.xml
+			<property>
+		        <name>fs.defaultFS</name>
+		        <value>hdfs://hadoop000:8020</value>
+		    </property>
+	
+			<property>
+				<name>hadoop.tmp.dir</name>
+				<value>/home/hadoop/app/tmp/dfs332</value>
+			</property>
+
+		etc/hadoop/hdfs-site.xml
+			<property>
+		        <name>dfs.replication</name>
+		        <value>1</value>
+		    </property>
+
+		免密码登陆
+			cd ~
+			rm -rf .ssh
+
+			ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa
+  			cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+			chmod 0600 ~/.ssh/authorized_keys
+
+
+	格式化文件系统：hdfs namenode -format  
+		切记：第一次时使用
+		后续你执行了这句话，那么你的HDFS文件系统就被格式化了，数据就丢了
+
+	启动HDFS：start-dfs.sh
+		[hadoop@hadoop000 sbin]$ jps
+		24897 SecondaryNameNode
+		24663 DataNode
+		24491 NameNode
+
+		http://hadoop000:9870
+
+	停止HDFS： stop-dfs.sh
+
+	为了后面使用hadoop命令方便，建议大家把HADOOP_HOME/bin添加到系统环境变量中
+		vi ~/.bash_profile
+			export HADOOP_HOME=/home/hadoop/app/hadoop-3.3.2
+			export PATH=$HADOOP_HOME/bin:$PATH
+		生效方式：
+			source ~/.bash_profile
+			打开一个新的窗口，重新ssh过去
+
+文件上传（本地：Linux系统  服务器：HDFS文件系统）
+	-moveFromLocal  将本地文件移动到HDFS上去，操作之后，本地文件不存在了
+	-copyFromLocal  将本地文件拷贝到HDFS上去，操作之后，本地文件还是存在的
+	-put 等同于-copyFromLocal  ***** 
+	-appendToFile 追加文件内容到已经存在的文件内容最后
+
+
+文件内容查看： 
+	-cat  注意文件大小
+	-text
+	-head
+	-tail
+
+
+文件下载
+	-get：从HDFS拷贝数据到本地
+	-copyToLocal  等价
+
+
+剩余操作
+	
+
+
+
+HDFS API的开发  *****
+    Java  Scala
+
+    开发工具：IDEA  Eclipse
+    Maven  希望的依赖包是需要通过网络来下载的
+
+
+
+
+junit：Java中单元测试的利器
+    不要以为带了测试的自眼就是测试任意的事情......
+    单元测试为开发人员写的
+    为我们开发的功能(方法)做功能性的验证
+        输入是什么？ 期望的输出是什么？ 实际的输出是什么？
+
+
+
+
+HDFS API编程的入口点FileSystem
+
+
+参数优先级的问题
+    IDEA开发：我们显式是没有这些配置文件的，隐式是有的一些配置文件
+        core-default.xml
+        hdfs-default.xml
+
+    服务器上用命令行操作  ==> $HADOOP_HOME/etc/hadoop/.....  配置文件
+        core-site.xml
+        hdfs-site.xml
+
+        Q：把服务器上的配置文件直接拷贝到resources文件夹下？？？
+            可以？ 为什么可以？
+            不可以？ 为什么不可以？
+            最佳实践：到底这种方式好不好？
+
+    Configuration：也是可以设置的
+
+
+
+
+
+
+

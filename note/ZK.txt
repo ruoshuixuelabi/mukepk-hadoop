@@ -1,0 +1,85 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export ZK_HOME=/home/hadoop/app/apache-zookeeper-3.8.0-bin
+export PATH=$ZK_HOME/bin:$PATH
+
+
+
+集群中的主要概念
+	主从节点： 
+		HDFS: NN(active standby)  DN
+		YARN: RM(active standby)  NM
+	心跳机制：
+	选举模式：
+		一般情况都是奇数个
+		配置了多个ZK节点
+		1     2    3
+		从    从    主
+
+
+单节点单server
+单节点多server
+每个节点一个server
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

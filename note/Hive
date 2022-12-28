@@ -1,0 +1,1062 @@
+Hive  
+	以后的工作中会大量使用
+
+
+MapReduce编程时各种不方便的特点
+	Mapper： map
+	Reducer： reduce
+	Driver：main
+	本地测试，打包，传到服务器，运行
+	开发过程复杂、繁琐....
+
+	JavaSE是需要的
+
+RDBMS：我能不能就是用SQL来进行大数据处理呢？
+
+==> 社区上才诞生了Hive这么一个框架
+	一个新框架的诞生必然是解决当前一类问题的
+
+Hive是什么呢？
+	hive.apache.org
+	github.com/apache/hive
+
+
+The Apache Hive ™ data warehouse software facilitates reading, writing, and managing large datasets residing in distributed storage using SQL
+
+distributed storage: HDFS OSS COS AWS
+使用SQL来进行读、写等操作
+data warehouse：数据仓库
+
+由Facebook开源，为了解决海量结构化的日志数据统计问题
+构建在Hadoop之上的数据仓库
+	HDFS：Hive的数据可以存放在HDFS之上
+	MR：分布式的执行引擎， Hive的作业是可以以mr的方式运行
+	YARN：统一的资源管理和调度
+底层支持多种不同的执行引擎：只要一个参数切换即可
+	MR
+	Tez
+	Spark
+定义了一种类SQL的语言： Hive QL（HQL）
+将SQL翻译成底层引擎对应的作业，并提交运行：翻译
+支持压缩、存储格式、自定义函数
+===> 适用于批计算/离线计算
+
+
+
+Hive的优缺点
+	优点：
+		类SQL语言，受众面大，易上手
+		比MR编程简单的多
+		内置了非常多的函数，即使不够，我们也可以自定义UDF函数
+	缺点：
+		SQL的表述能力有限
+		作业的延迟比较大/高，适合实时吗？
+		处理少量的数据可能也会花费比较多的时间
+
+	适用场景：
+		离线/批计算
+		延迟比较大	
+
+
+Hive的架构 *****
+
+	访问方式：
+		Cli：命令行
+		JDBC/ODBC：代码          HiveServer2(HS2)
+		WebUI：HUE Zeppelin     HiveServer2(HS2)
+
+	Driver: *****
+		解析器：SQL(String) ==> AST(抽象语法树)
+		编译器：AST ==> 逻辑执行计划
+		优化器：逻辑执行计划进行优化
+		执行器：执行计划 ==> 底层引擎的作业(MR/Tez/Spark)
+
+		select deptno,count(1) cnt from emp group by deptno;
+
+	MetaStore：元数据	
+		元数据：描述数据的数据
+
+		id,name,age
+
+		stu.txt ==> HDFS上的文本数据
+		1,pk,31
+		2,zs,30
+		3,ls,31
+
+		我们如何使用SQL对HDFS上的数据进行操作呢？
+			要表HDFS上的数据映射成一张表
+				hdfs://hadoop000:8020/stu.txt
+				==>
+				表：stu
+			表字段：
+				id int  1(index：该字段在表中的第几列)
+				name string 2
+				age int 3
+
+			分隔符：逗号		
+		Hive的元数据是存放在MySQL里面
+		Hive的数据是有2个部分构成
+			Hive数据是存放在HDFS上的
+			Hive元数据是存放在MySQL中的
+
+
+
+面试题：Hive vs RDBMS
+
+	面向SQL      
+		Hive：ok         
+		RDBMS：ok
+
+	延时性
+		Hive：统计分析，批/离线计算，延时性比较高         
+		RDBMS：数据/统计查询，实时快速的拿到结果，延时性是非常短的
+
+	事务
+		Hive：支持事务的
+		RDBMS：支持事务的
+
+	insert/update/delete： 0.14
+		Hive：支持的(是有版本要求的)
+		RDBMS：支持的
+
+	分布式	
+		Hive：MR Tez Spark   扩节点  上万节点 廉价机器上的
+		RDBMS：支持分布式             几十个   专用机器上
+
+	数据量
+		Hive：PB
+		RDBMS：P？？？？	    
+
+Hive部署
+	tar -zxvf apache-hive-3.1.2-bin.tar.gz -C ~/app
+
+	export HIVE_HOME=/home/hadoop/app/apache-hive-3.1.2-bin
+	export PATH=$HIVE_HOME/bin:$PATH
+
+	$HIVE_HOME/conf/hive-site.xml
+
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+<property>
+	  <name>javax.jdo.option.ConnectionURL</name>
+	  <value>jdbc:mysql://localhost:3306/pk_hive?createDatabaseIfNotExist=t
+rue&amp;useSSL=false&amp;useUnicode=true&amp;characterEncoding=UTF-8</value>
+	</property>
+
+	<property>
+	  <name>javax.jdo.option.ConnectionDriverName</name>
+	  <value>com.mysql.jdbc.Driver</value>
+	</property>
+
+	<property>
+	  <name>javax.jdo.option.ConnectionUserName</name>
+	  <value>root</value>
+	</property>
+
+	<property>
+	  <name>javax.jdo.option.ConnectionPassword</name>
+	  <value>!Ruozedata123</value>
+	</property>
+</configuration>
+
+
+mysql的驱动拷贝的$HIVE_HOME/lib/
+
+./schematool -dbType mysql -initSchema
+
+Hive中有一个默认的自带的数据库  default
+
+
+
+
+
+Hive中参数的设置
+	set key;  查看key的值
+	set key=value; 设置key的值
+	这种设置方式仅仅只对当前session有效
+
+
+	set hive.cli.print.header=true;
+	set hive.cli.print.current.db=true;
+
+	如果你想设置全局有效 $HIVE_HOME/conf/hive-site.xml
+	<property>
+      <name>hive.cli.print.header</name>
+      <value>true</value>
+    </property>
+
+    <property>
+      <name>hive.cli.print.current.db</name>
+      <value>true</value>
+    </property>
+
+    hive --hiveconf hive.cli.print.current.db=false
+
+    Hive是构建在Hadoop之上的数据仓库
+    	数据==>HDFS  hive.metastore.warehouse.dir
+    	元数据==>MySQL
+
+
+
+Hive里面的数据抽象模型(*****)
+
+Hive的数据是存在对应的HDFS路径上的
+default： /user/hive/warehouse/ 可以改的
+
+
+
+
+DDL
+	Data Definition Language
+	描述Hive的表结构相关的
+	create
+	alter
+
+CREATE [REMOTE] (DATABASE|SCHEMA) [IF NOT EXISTS] database_name
+[COMMENT database_comment]
+[LOCATION hdfs_path]
+[MANAGEDLOCATION hdfs_path]
+[WITH DBPROPERTIES (property_name=property_value, ...)];
+
+
+CREATE DATABASE IF NOT EXISTS pk_hive3 
+COMMENT 'this is pk hive database'
+WITH DBPROPERTIES('creator'='pk', 'date'='20880101')
+;
+
+在HDFS上的路径：
+	default: /user/hive/warehouse
+	自己创建的数据库： /user/hive/warehouse/db_name.db
+
+ALTER DATABASE pk_hive3 SET DBPROPERTIES ('year'='2088');  
+
+
+
+Hive的数据类型
+	int  
+	bigint
+	float
+	double
+	string
+
+id name age
+1,pk,30
+2,ls,20
+3,ww,18
+
+分隔符
+\n
+列之间的分隔符： \001   ^A
+
+, tab(\t)
+
+1$$$pk$$$30
+2$$$ls$$$20
+3$$$ww$$$18
+
+
+
+
+CREATE TABLE xxx
+EXTERNAL：外部表
+col_name data_type： 字段名 字段类型 ， 多个字段之间使用逗号隔开
+COMMENT：对表加上注释
+PARTITIONED BY：指定分区
+CLUSTERED BY：4大by来讲解
+ROW FORMAT
+	DELIMITED FIELDS TERMINATED BY ','
+STORED AS：以什么格式进行存储
+	textfile
+	orc
+	parquet
+LOCATION hdfs_path：指定表的路径
+like：复制表结构，不复制数据
+
+经典面试题：内部表和外部表的区别
+create table emp_managed as select * from emp;
+
+内部表：MANAGED_TABLE
+	drop: 数据和元数据都会被删除
+
+外部表：EXTERNAL_TABLE	
+	drop：元数据会被删除，数据还存在
+
+
+ALTER TABLE emp_managed SET TBLPROPERTIES('EXTERNAL'='TRUE');
+
+
+LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)]
+LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)] [INPUTFORMAT 'inputformat' SERDE 'serde'] (3.0 or later)
+
+LOAD DATA：加载数据
+LOCAL： 从本地加载数据到Hive表，否则就是用HDFS加载数据
+INPATH：要加载数据的路径
+OVERWRITE：覆盖  否则就是追加
+INTO TABLE ：加载到哪张表
+
+load data local inpath '/home/hadoop/data/emp.txt' overwrite into table emp;
+load data local inpath '/home/hadoop/data/dept.txt' overwrite into table dept;
+
+load data inpath '/data/hive/emp.txt' into table emp;
+load data inpath '/data/hive/dept.txt' into table dept;
+
+
+create table xx as select ...   CTAS
+
+INSERT OVERWRITE TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...) [IF NOT EXISTS]] select_statement1 FROM from_statement;
+INSERT INTO TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] select_statement1 FROM from_statement;
+
+insert overwrite table emp3 
+select 
+empno,job,ename,mgr,hiredate,sal,comm,deptno
+from emp;
+
+
+insert overwrite directory '/hivetmp'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+select * from emp;
+
+
+create table dept(
+deptno int,
+dname string,
+loc string
+)ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+
+create external table emp_external(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double,
+deptno int
+) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+location '/hive_external/emp'
+;
+
+
+create table emp(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double,
+deptno int
+) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+
+create table emp2 like emp;
+create table emp3 as select * from emp;
+
+
+load data local inpath '/home/hadoop/data/emp.txt' overwrite into table emp;
+local:linux机器
+
+CREATE [TEMPORARY] [EXTERNAL] TABLE [IF NOT EXISTS] [db_name.]table_name    -- (Note: TEMPORARY available in Hive 0.14.0 and later)
+  [(col_name data_type [column_constraint_specification] [COMMENT col_comment], ... [constraint_specification])]
+  [COMMENT table_comment]
+  [PARTITIONED BY (col_name data_type [COMMENT col_comment], ...)]
+  [CLUSTERED BY (col_name, col_name, ...) [SORTED BY (col_name [ASC|DESC], ...)] INTO num_buckets BUCKETS]
+  [SKEWED BY (col_name, col_name, ...)                  -- (Note: Available in Hive 0.10.0 and later)]
+     ON ((col_value, col_value, ...), (col_value, col_value, ...), ...)
+     [STORED AS DIRECTORIES]
+  [
+   [ROW FORMAT row_format] 
+   [STORED AS file_format]
+     | STORED BY 'storage.handler.class.name' [WITH SERDEPROPERTIES (...)]  -- (Note: Available in Hive 0.6.0 and later)
+  ]
+  [LOCATION hdfs_path]
+  [TBLPROPERTIES (property_name=property_value, ...)]   -- (Note: Available in Hive 0.6.0 and later)
+  [AS select_statement];   -- (Note: Available in Hive 0.5.0 and later; not supported for external tables)
+
+CREATE [TEMPORARY] [EXTERNAL] TABLE [IF NOT EXISTS] [db_name.]table_name
+  LIKE existing_table_or_view_name
+  [LOCATION hdfs_path];
+
+data_type
+  : primitive_type
+  | array_type
+  | map_type
+  | struct_type
+  | union_type  -- (Note: Available in Hive 0.7.0 and later)
+
+primitive_type
+  : TINYINT
+  | SMALLINT
+  | INT
+  | BIGINT
+  | BOOLEAN
+  | FLOAT
+  | DOUBLE
+  | DOUBLE PRECISION -- (Note: Available in Hive 2.2.0 and later)
+  | STRING
+  | BINARY      -- (Note: Available in Hive 0.8.0 and later)
+  | TIMESTAMP   -- (Note: Available in Hive 0.8.0 and later)
+  | DECIMAL     -- (Note: Available in Hive 0.11.0 and later)
+  | DECIMAL(precision, scale)  -- (Note: Available in Hive 0.13.0 and later)
+  | DATE        -- (Note: Available in Hive 0.12.0 and later)
+  | VARCHAR     -- (Note: Available in Hive 0.12.0 and later)
+  | CHAR        -- (Note: Available in Hive 0.13.0 and later)
+
+array_type
+  : ARRAY < data_type >
+
+map_type
+  : MAP < primitive_type, data_type >
+
+struct_type
+  : STRUCT < col_name : data_type [COMMENT col_comment], ...>
+
+union_type
+   : UNIONTYPE < data_type, data_type, ... >  -- (Note: Available in Hive 0.7.0 and later)
+
+row_format
+  : DELIMITED [FIELDS TERMINATED BY char [ESCAPED BY char]] [COLLECTION ITEMS TERMINATED BY char]
+        [MAP KEYS TERMINATED BY char] [LINES TERMINATED BY char]
+        [NULL DEFINED AS char]   -- (Note: Available in Hive 0.13 and later)
+  | SERDE serde_name [WITH SERDEPROPERTIES (property_name=property_value, property_name=property_value, ...)]
+
+file_format:
+  : SEQUENCEFILE
+  | TEXTFILE    -- (Default, depending on hive.default.fileformat configuration)
+  | RCFILE      -- (Note: Available in Hive 0.6.0 and later)
+  | ORC         -- (Note: Available in Hive 0.11.0 and later)
+  | PARQUET     -- (Note: Available in Hive 0.13.0 and later)
+  | AVRO        -- (Note: Available in Hive 0.14.0 and later)
+  | JSONFILE    -- (Note: Available in Hive 4.0.0 and later)
+  | INPUTFORMAT input_format_classname OUTPUTFORMAT output_format_classname
+
+column_constraint_specification:
+  : [ PRIMARY KEY|UNIQUE|NOT NULL|DEFAULT [default_value]|CHECK  [check_expression] ENABLE|DISABLE NOVALIDATE RELY/NORELY ]
+
+default_value:
+  : [ LITERAL|CURRENT_USER()|CURRENT_DATE()|CURRENT_TIMESTAMP()|NULL ]  
+
+constraint_specification:
+  : [, PRIMARY KEY (col_name, ...) DISABLE NOVALIDATE RELY/NORELY ]
+    [, PRIMARY KEY (col_name, ...) DISABLE NOVALIDATE RELY/NORELY ]
+    [, CONSTRAINT constraint_name FOREIGN KEY (col_name, ...) REFERENCES table_name(col_name, ...) DISABLE NOVALIDATE 
+    [, CONSTRAINT constraint_name UNIQUE (col_name, ...) DISABLE NOVALIDATE RELY/NORELY ]
+    [, CONSTRAINT constraint_name CHECK [check_expression] ENABLE|DISABLE NOVALIDATE RELY/NORELY ]
+
+
+
+
+
+
+分区表 *****
+
+log: 谁 什么时候  做了什么事情
+log_yyyyMMdd
+
+log_20281001
+log_20281002
+log_20281003
+
+减少数据扫描量
+
+access_20281001
+access_20281002
+access_20281003
+
+Hive中的分区对应的是HDFS上的一个文件夹
+
+access
+	.....
+
+select * from xxx where day='...'
+
+分区表的思想：把一个大的数据集，按照分区的条件分割成更小的数据集
+			在扫描时减少扫描的数据量，进而提升统计分析作业的性能
+
+静态分区
+create table dept_partition_d_h(
+deptno int,
+dname string,
+loc string
+)PARTITIONED BY (day string, hour string)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+
+LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)]
+load data local inpath '/home/hadoop/data/dept.txt' OVERWRITE INTO TABLE dept_partition_d_h PARTITION(day='20281001', hour='01');
+load data local inpath '/home/hadoop/data/dept.txt' OVERWRITE INTO TABLE dept_partition_d_h PARTITION(day='20281001', hour='02');
+
+emp表 ==> 按照deptno插入到按deptno为分区的表中
+
+create table emp_dynamic_partition(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double
+) PARTITIONED BY (deptno int)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+
+insert overwrite table emp_dynamic_partition partition(deptno)
+select empno,ename,job,mgr,hiredate,sal,comm, deptno from emp;
+
+
+动态分区
+
+
+
+group by *****
+求emp表中每个部门的平均工资
+deptno
+
+select deptno, avg(sal) avg_sal from emp group by deptno having avg_sal>2000;
+
+select中的字段，要么是group by中出现过的，要么是聚合函数的
+
+求emp表中每个部门的平均工资大于2000的部门
+
+where deptno=10;
+分组过后的过滤需要使用having关键字
+
+
+
+
+join *****
+
+两表或者多表的关联操作
+
+等值join  
+	inner join
+
+左外join
+	以左边的表为基准，左边的数据全出来，匹配不上的置空
+
+右外join
+	以右边的表为基准，右边的数据全出来，匹配不上的置空
+
+全外join
+	左右表都出来，匹配不上的置空
+
+select 
+e.empno, e.ename, d.deptno, d.dname
+from 
+emp e  join dept d 
+on e.deptno=d.deptno;	
+
+笛卡尔积
+	连接条件没写/无效
+	慎用
+
+
+
+
+
+
+
+array_type
+  : ARRAY < data_type >
+
+create table hive_array(
+name string,
+work_location ARRAY<string>
+)ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+COLLECTION ITEMS TERMINATED BY ',';
+
+load data local inpath '/home/hadoop/data/hive_array.txt' overwrite into table hive_array;
+
+
+map_type
+  : MAP < primitive_type, data_type >
+  MAP KEYS TERMINATED BY char
+
+create table hive_map(
+id int,
+name string,
+members map<string,string>,
+age int
+)ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+COLLECTION ITEMS TERMINATED BY '#'
+MAP KEYS TERMINATED BY ':';
+load data local inpath '/home/hadoop/data/hive_map.txt' overwrite into table hive_map;
+
++-----+-----------+--------------------------------+------+
+| id  |   name    |           relations            | age  |
++-----+-----------+--------------------------------+------+
+| 1   | zhangsan  | ["father","mother","brother"]  | 28   |
+| 2   | lisi      | ["father","mother","brother"]  | 22   |
+| 3   | wangwu    | ["father","mother","sister"]   | 29   |
+| 4   | zhaoliu   | ["father","mother"]            | 26   |
++-----+-----------+--------------------------------+------+
+
++-----+-----------+-------------------------------------+------+
+| id  |   name    |              relations              | age  |
++-----+-----------+-------------------------------------+------+
+| 1   | zhangsan  | ["xiaoming","xiaohuang","xiaoxu"]   | 28   |
+| 2   | lisi      | ["laoli","laohuang","xiaoxiaoli"]   | 22   |
+| 3   | wangwu    | ["laowang","laozhang","xiaozhang"]  | 29   |
+| 4   | zhaoliu   | ["laozhao","laobi"]                 | 26   |
++-----+-----------+-------------------------------------+------+
+
+查询有兄弟的人，以及兄弟的名称
+
+select map_keys(members) from hive_map;
+select id,name,age,members['brother'] from hive_map where array_contains(map_keys(members), 'brother');
+
+struct_type
+  : STRUCT < col_name : data_type [COMMENT col_comment], ...>
+192.168.1.1#zhangsan:40
+192.168.1.2#lisi:50
+192.168.1.3#wangwu:60
+192.168.1.4#zhaoliu:70
+
+create table hive_struct(
+ip string,
+userinfo struct<name:string, age:int>
+)ROW FORMAT DELIMITED FIELDS TERMINATED BY '#'
+COLLECTION ITEMS TERMINATED BY ':';
+load data local inpath '/home/hadoop/data/hive_struct.txt' overwrite into table hive_struct;
+
+
+
+union_type
+   : UNIONTYPE < data_type, data_type, ... >  -- (Note: Available in Hive 0.7.0 and later)
+
+
+
+
+
+Hive函数 *****
+	内置函数 build-in
+		show functions; 
+		desc function upper;
+		desc function extended upper;
+
+
+	自定义函数 UDF
+
+
+
+
+
+
+select json_tuple(json, 'movie','rate','time','userid') as(movie,rate,`time`,userid)  from rating_json limit 5;
+
+
+CTAS
+create table t_rate
+as
+select 
+userid,movie,rate,`time`,
+year(from_unixtime(cast(`time` as bigint))) as year,
+month(from_unixtime(cast(`time` as bigint))) as month,
+day(from_unixtime(cast(`time` as bigint))) as day,
+hour(from_unixtime(cast(`time` as bigint))) as hour,
+minute(from_unixtime(cast(`time` as bigint))) as minute,
+from_unixtime(cast(`time` as bigint)) as ts
+from
+(select json_tuple(json, 'movie','rate','time','userid') as(movie,rate,`time`,userid)  from rating_json)
+tmp;
+
+
+case [expression]
+	when condition1 then result1
+	when condition2 then result2
+	.....
+	else result
+end
+
+
+select 
+ename, sal,
+case 
+when sal>1 and sal<=1000 then 'lower'
+when sal>1000 and sal<=2000 then 'middle'
+when sal>2000 and sal<=4000 then 'high'
+else 'highest'
+end
+from emp;
+
+
+最后一个字段：1男  2女
+1,PK,RD,1
+2,RUOZE,RD,1
+3,XIAOHONG,RD,2
+
+4,XIAOZHANG,QA,1
+5,XIAOLI,QA,2
+6,XIAOFANG,QA,2
+
+==>
+部门  男    女
+RD    2     1
+QA    1     2
+
+==>
+RD,1  PK|RUOZE
+RD,2  XIAOHONG
+QA,1  XIAOZHANG
+QA,2  XIAOLI|XIAOFANG
+
+功能拆解，一步一步的来实现
+
+
+
+
+PK	MapReduce,Hive,Spark,Flink
+J	Hadoop,HBase,Kafka
+==> 
+PK MapReduce
+PK Hive
+PK Spark
+PK Flink
+J Hadoop
+J HBase
+J Kafka
+
+create table t_courses(
+name string,
+courses string
+)row format delimited fields terminated by '\t';
+
+load data local inpath '/home/hadoop/data/column2row.txt' into table t_courses;
+
+explode(col)：将hive一列中复杂的array拆分成多行  炸裂
+lateral view：
+	lateral view udtf(exp) tablealias as columnalias
+
+select 
+name, course
+from t_courses
+lateral view explode(split(courses,',')) course_tmp as course;
+
+
+使用hive完成wc统计 *****
+
+
+
+hello,hello,hello
+world,world
+welcome
+
+create table hive_wc(
+sentence string
+);
+
+load data local inpath '/home/hadoop/data/hive-wc.txt' into table hive_wc;
+select * from hive_wc;
+
+select word ,count(1) cnt
+from
+(
+select explode(split(sentence,',')) as word from hive_wc
+) t 
+group by word
+order by cnt desc;
+
+
+
+
+UDF函数
+	User-Defined-Function
+
+	UDF
+		一进一出
+		upper
+		select ename,upper(ename) from emp;
+
+	UDAF
+		User-Defined Aggregation Function
+		多进一出
+		count max min sum avg
+
+	UDTF
+		User-Defined Table-Generating Function
+		一进多出
+
+
+
+pk_split("pk,pk,spark",",")		
+pk_split("pk:pk:spark",":")	
+
+pk
+pk
+spark
+
+add jar /home/hadoop/lib/pk-hadoop-1.0.jar;
+CREATE TEMPORARY FUNCTION pk_split AS "com.pk.hive.udf.UDTFPKSplit";
+
+CREATE FUNCTION say_hello4 AS "com.pk.hive.udf.UDFHello"
+USING JAR "hdfs://hadoop000:8020/lib/pk-hadoop-1.0.jar";
+
+
+聚合函数：多进一出
+	max min sum count avg
+
+既要展示聚合前的数据，又要展示聚合后的数据
+
+窗口函数  =   窗口    函数
+
+xxx over(partition by  order by)
+
+sum
+
+
+create table win01(
+domain string,
+`time` string,
+traffic int
+)row format delimited fields terminated by ',';
+
+load data local inpath '/home/hadoop/data/window/window01.txt' into table win01;
+
+(ROWS | RANGE) BETWEEN (UNBOUNDED | [num]) PRECEDING AND ([num] PRECEDING | CURRENT ROW | (UNBOUNDED | [num]) FOLLOWING)
+(ROWS | RANGE) BETWEEN CURRENT ROW AND (CURRENT ROW | (UNBOUNDED | [num]) FOLLOWING)
+(ROWS | RANGE) BETWEEN [num] FOLLOWING AND (UNBOUNDED | [num]) FOLLOWING
+
+ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
+
+select
+domain,`time`,traffic,
+sum(traffic) over(partition by domain order by `time`) pv1,
+sum(traffic) over(partition by domain order by `time` ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) pv2,
+sum(traffic) over(partition by domain) pv3,
+sum(traffic) over(partition by domain order by `time` ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) pv4,
+sum(traffic) over(partition by domain order by `time` ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) pv5,
+sum(traffic) over(partition by domain order by `time` ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) pv6
+from 
+win01 order by `time`;
+
+
+create table win_traffic(
+domain string,
+`time` string,
+traffic int
+)row format delimited fields terminated by ',';
+
+load data local inpath '/home/hadoop/data/window/rank.txt' into table win_traffic;
+
+select domain,`time`,traffic,
+NTILE(2) over(partition by domain order by `time`) rn1,  
+NTILE(3) over(partition by domain order by `time`) rn2
+from 
+win_traffic
+order by domain, `time`
+;
+
+select domain,`time`,traffic,
+row_number() over(partition by domain order by traffic desc) rn1 ,
+rank() over(partition by domain order by traffic desc) rn2  ,
+dense_rank() over(partition by domain order by traffic desc) rn3  
+from 
+win_traffic;
+
+
+row_number：从1开始，按照顺序，生成分组内记录的编号
+rank：分组内生成编号，排序相同时会重复，总数不会变，排名相同时会留有空位
+dense_rank：分组内生成编号，排序相同时会重复，总数会变少，排名相同时不会留有空位
+
+
+create table win03(
+cookieid string,
+`time` string,
+url string
+)row format delimited fields terminated by ',';
+
+load data local inpath '/home/hadoop/data/window/window03.txt' into table win03;
+
+lag(col, n, default)  用于统计窗口内往上取第N行的值
+lead(col, n, default) 用于统计窗口内往下取第N行的值
+
+select cookieid,`time`,url,
+row_number() over(partition by cookieid order by `time`) rn,
+last_value(url)  over(partition by cookieid order by `time`) rn2
+from win03;
+
+create table win02(
+dept string,
+`user` string,
+sal int
+)row format delimited fields terminated by ',';
+
+load data local inpath '/home/hadoop/data/window/window02.txt' into table win02;
+
+select dept, `user`,sal,
+PERCENT_RANK() over(order by sal) rn1,
+PERCENT_RANK() over(partition by dept order by sal) rn2
+from win02;
+cume_dist： 小于等于当前行值的行数 /  分组内的总行数
+precent_rank： 分组内当前行的rank - 1 / 分组内的总行数 -1 
+
+
+
+
+
+emp按照sal从低到高排序，算出每一个人和上一个人的薪资差
+
+order by sal
+lag
+
+
+select 
+t.ename, t.sal, t.sal-nvl(t.last,0) diff
+from
+(
+select ename, sal,
+lag(sal, 1) over(order by sal) last
+from emp) t;
+
+
+
+
+
+Hive调优 *****
+	基本篇
+	实战篇（项目部分）
+
+	调优：生产上  很多的作业是需要经过调优
+		根据一定的场景来的
+
+
+
+sql：
+	什么样的sql会跑yarn？什么样的sql不用跑？
+
+
+本地模式
+	hive.exec.mode.local.auto  开关
+	最大输入数据量
+	最大task个数
+	最大输入文件个数
+
+
+四大by *****
+order by
+	全局排序
+	只能有一个reducetask来完成
+	不管你是否设置了reduce的个数(无效)
+	与严格模式有关系
+
+sort by
+	分区内有序  
+	可以设置多个reducetask，只保证每个reduce出来的结果有序，不保证全局有序
+	与严格模式没关系
+	注意sort by后面跟的字段的数据类型
+
+distribute by
+	不是排序
+	控制map端如何分发数据到reducer    partitioner
+	hash + 取余
+
+insert overwrite local directory '/home/hadoop/hive_tmp/cluster2' row format delimited fields terminated by '\t' select * from temperature cluster by year;
+
+cluster by
+	除了具备有distribute by之外 还具备sort by的功能
+	=  distribute by  xxx   sort by xxx
+
+select * from temperature cluster by year desc;
+
+
+
+并行执行
+一个hive ql可能会被翻译成多个mr作业，
+多个mr作业之间并不是相互依赖的
+如果集群资源够的话，我们就可以开启并行执行这个功能
+select 
+...
+from
+(
+(select xxxx from t group by a)
+join
+(select xxxx from t1 group by b)
+join
+(select xxxx from t2 group by c)
+) on ....
+
+
+
+
+
+关于MapTask数量的合理设置问题
+
+FileInputFormat
+	780   6个128 + 1个小的  == 7个MapTask
+	10m   1
+	20m    1
+	150m   2
+影响MapTask个数的因素：总文件个数、文件大小、block大小
+MapTask ReduceTask都是以JVM进程的方式运行的
+
+越多也好   x
+一个MT接近128M  x
+	120M  业务非常复杂  ==> 增加MapTask数量  
+
+
+
+关于ReduceTask数量的合理设置问题 *****
+set hive.exec.reducers.bytes.per.reducer=<number>
+set hive.exec.reducers.max=<number>
+set mapreduce.job.reduces=<number>
+
+set mapreduce.job.reduces=?
+
+
+
+
+
+
+
+数据倾斜
+
+
+group by
+	set hive.groupby.skewindata=true
+
+count(distinct xxx)
+
+create table page_views(
+url string,
+session_id string,
+referer string,
+ip string,
+end_user_id string,
+city string
+)row format delimited fields terminated by '\t';
+
+
+load data local inpath '/home/hadoop/data/page_views.dat' into table page_views;
+
+select count(distinct city) from page_views;
+
+select count(1)
+from
+(
+select city from page_views group by city
+) t;
+
+
+join  
+	explain
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

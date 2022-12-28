@@ -1,0 +1,2 @@
+pk	beijing,shanghai,tianjin,hangzhou
+zs	changchu,chengdu,wuhan,beijing

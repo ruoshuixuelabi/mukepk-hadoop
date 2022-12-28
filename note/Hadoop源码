@@ -1,0 +1,189 @@
+Hadoop源码分析
+
+
+建议：
+1）掌握架构(核心组件/进程的职责)
+2）掌握开发(API)
+3）源码
+	也不是一行一行的读，而是要抓住重点
+
+NameNode&DataNode入手
+	入口类
+		我们是如何启动的？
+		根据脚本中描述的信息，我们知道org.apache.hadoop.hdfs.server.namenode.NameNode
+		Java类是如何运行？ main方法是Java类的入口点
+
+	对于你要深入研究一个类，类上面的注释我们是一定要看的
+	
+NN上维护两个主要的表(映射关系)
+	filename --> blocksequence   namespace
+	block --> machinelist        inode
+
+NN主要由NameNode server、FSNamesystem、NameNode所构成
+	NameNode：
+		IPC interface：开放端口，内部的 8020
+		the HTTP server：9870服务  Web UI相关的
+
+NN中核心成员变量
+	FSNamesystem namesystem; 
+	NamenodeRole role;
+	HAState state;
+	boolean haEnabled;
+	HAContext haContext;
+	protected NameNodeHttpServer httpServer;
+	private NameNodeRpcServer rpcServer;
+
+
+
+梳理NN启动流程
+NameNode.main()
+	createNameNode()	
+		initialize()
+			startHttpServer()
+			loadNamesystem()
+			createRpcServer()
+				new NameNodeRpcServer()
+					serviceRpcServer = new RPC.Builder
+					clientRpcServer = new RPC.Builder
+			startCommonServices()
+				namesystem.startCommonServices
+					nnResourceChecker = new NameNodeResourceChecker(conf);
+      				checkAvailableResources();
+      				blockManager.activate(conf, completeBlocksTotal);
+      					datanodeManager.activate(conf);
+      					bmSafeMode.activate(blockTotal);
+
+
+
+
+DataNode启动过程
+
+DataNode.main
+	secureMain
+		createDataNode
+			instantiateDataNode
+				dataLocations = getStorageLocations(conf)
+				makeInstance
+					storageLocationChecker.check
+					new DataNode
+						startDataNode
+							storage = new DataStorage();
+							initDataXceiver(); DN用来接收客户端或者是其他DN发送过来的请求的数据服务
+    						startInfoServer();  初始化HTTP相关的服务
+    						initIpcServer();   初始化RPC服务
+    						blockPoolManager = new BlockPoolManager(this);
+    						blockPoolManager.refreshNamenodes(getConf());  DN向NN进行注册
+    							doRefreshNamenodes
+    							createBPOS
+    							startAll()
+    								bpos.start();
+    									actor.start();
+    										bpThread.start();
+    											connectToNNAndHandshake();
+    												bpNamenode = dn.connectToNN(nnAddr);
+    													register(nsInfo);
+    														bpNamenode.registerDatanode
+    															rpcProxy.registerDatanode
+    																NameNodeRPCServer.registerDatanode
+    																	blockManager.registerDatanode(nodeReg);
+    																		datanodeManager.registerDatanode(nodeReg);
+    																			addDatanode(nodeDescr);
+    																			heartbeatManager.addDatanode(nodeDescr);
+
+    											offerService();
+    												 sendHeartBeat(requestBlockReportLease);
+    												 	bpNamenode.sendHeartbeat
+    												 		NameNodeRPCServer.sendHeartbeat
+    												 			namesystem.handleHeartbeat
+    												 				handleHeartbeat
+    												 					heartbeatManager.updateHeartbeat
+    												 				new HeartbeatResponse 
+
+			runDatanodeDaemon
+				blockPoolManager.startAll();
+			    dataXceiverServer.start();
+			    if (localDataXceiverServer != null) {
+			      localDataXceiverServer.start();
+			    }
+			    ipcServer.start();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MR作业运行过程源码分析
+job.waitForCompletion
+	submit()
+		setUseNewAPI();  设置新来MR API的兼容性问题
+		connect();   建立连接，拿到Cluster 
+		JobSubmitter submitter   拿到Job的提交器
+		submitter.submitJobInternal
+			checkSpecs(job);   检查Output的信息
+			Path jobStagingArea
+			JobID jobId     获取Job的id， local_  application_
+			job.setJobID(jobId);
+			Path submitJobDir = new Path(jobStagingArea, jobId.toString());
+			copyAndConfigureFiles(job, submitJobDir);
+			int maps = writeSplits(job, submitJobDir);  完成作业的切片
+				在该作业的目录下就存在了切片信息
+			writeConf(conf, submitJobFile); 将作业的配置信息，jar等信息输出到该job的目录中去
+
+如何切片  
+	
+	long minSize = Math.max(1, 0);  1
+    long maxSize = Long.MAX_VALUE
+
+    long splitSize = computeSplitSize(32M, 1, Long.MAX_VALUE);
+    	Math.max(1, Math.min(Long.MAX_VALUE, 32M));
+    	Math.max(1, 32M)
+
+    ((double) bytesRemaining)/splitSize > SPLIT_SLOP  // 1.1
+
+    32M ==> 1 InputSplit
+    32.1M  ==> 1 InputSplit    2?
+    	2? 2MT
+    	32.1M  2BLOCK  2机器上
+
+
+
+
+MapTask ReduceTask
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
