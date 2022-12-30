@@ -1,11 +1,11 @@
 package com.pk.scala.akka
 
 import java.util.UUID
-
 import akka.actor.{Actor, ActorSelection, ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class DataNode extends Actor {
 

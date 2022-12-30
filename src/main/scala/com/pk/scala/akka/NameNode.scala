@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigFactory
 
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 
 class NameNode extends Actor{

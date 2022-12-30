@@ -25,10 +25,10 @@ object B {
       *
       * 注意新老版本的用法
       */
-    import scala.collection.JavaConversions._
-    for(ele <- list) {
-      println(ele)
-    }
+//    import scala.collection.JavaConversions._
+//    for(ele <- list) {
+//      println(ele)
+//    }
 
   }
 

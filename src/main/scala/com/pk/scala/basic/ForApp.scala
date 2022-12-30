@@ -1,5 +1,7 @@
 package com.pk.scala.basic
 
+import scala.language.postfixOps
+
 /**
   * for循环 *****
   */
