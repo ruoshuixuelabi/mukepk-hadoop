@@ -1,7 +1,6 @@
 package com.pk.scala.oo.pack1
 
 class A {
-
   val name = "PK"
   val age = 31
 
@@ -12,5 +11,4 @@ class A {
   def methodB(): Unit = {
     println("---A.methodB---")
   }
-
 }

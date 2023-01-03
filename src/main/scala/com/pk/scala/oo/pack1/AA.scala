@@ -1,7 +1,6 @@
 package com.pk.scala.oo.pack1
 
 class AA {
-
   val city = "BEIJING"
 
   def methodC(): Unit = {
@@ -11,5 +10,4 @@ class AA {
   def methodD(): Unit = {
     println("---AA.methodD---")
   }
-
 }
