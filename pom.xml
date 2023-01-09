@@ -11,11 +11,13 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
-        <hadoop.version>3.3.2</hadoop.version>
-        <hive.version>3.1.2</hive.version>
+        <hadoop.version>3.3.4</hadoop.version>
+        <hive.version>3.1.3</hive.version>
         <scala.version>2.13.10</scala.version>
         <scala.tools.version>2.13</scala.tools.version>
-        <akka.version>2.5.32</akka.version>
+        <akka.version>2.6.20</akka.version>
+        <mysql.version>8.0.30</mysql.version>
+        <spark.version>3.3.1</spark.version>
     </properties>
     <dependencies>
         <!--Hadoop的依赖包-->
@@ -45,14 +47,14 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.47</version>
+            <version>${mysql.version}</version>
         </dependency>
         <!-- Hive依赖-->
-        <!--<dependency>-->
-        <!--<groupId>org.apache.hive</groupId>-->
-        <!--<artifactId>hive-exec</artifactId>-->
-        <!--<version>${hive.version}</version>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-exec</artifactId>
+            <version>${hive.version}</version>
+        </dependency>
         <!-- Scala依赖-->
         <dependency>
             <groupId>org.scala-lang</groupId>
@@ -62,8 +64,8 @@
         <!-- Spark Core依赖-->
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.12</artifactId>
-            <version>3.2.1</version>
+            <artifactId>spark-core_${scala.tools.version}</artifactId>
+            <version>${spark.version}</version>
         </dependency>
         <!-- Akka-->
         <dependency>
