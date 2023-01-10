@@ -37,6 +37,7 @@ public class MySQLInputFormatApp {
         @Override
         protected void map(LongWritable key, DeptWritable value, Context context) throws IOException, InterruptedException {
             context.write(NullWritable.get(), value);
+
         }
     }
 }
