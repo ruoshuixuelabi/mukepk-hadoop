@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URI;
+import java.nio.file.Files;
 
 public class HDFSApp02 {
 
@@ -18,11 +19,10 @@ public class HDFSApp02 {
     @Before
     public void setup() throws Exception {
         System.out.println("setup");
-        System.setProperty("HADOOP_USER_NAME", "hadoop");
+        System.setProperty("HADOOP_USER_NAME", "root");
         Configuration configuration = new Configuration();
-        configuration.set("fs.defaultFS", "hdfs://hadoop000:8020");
+        configuration.set("fs.defaultFS", "hdfs://172.18.30.88:9000");
         configuration.set("dfs.client.use.datanode.hostname", "true");
-
         fileSystem = FileSystem.get(configuration);
     }
 
@@ -61,7 +61,6 @@ public class HDFSApp02 {
         fileSystem.rename(src, dst);
     }
 
-
     /**
      * 展示
      */
@@ -75,12 +74,10 @@ public class HDFSApp02 {
             String permission = fileStatus.getPermission().toString(); // 权限
             long len = fileStatus.getLen(); // 文件大小
             String path = fileStatus.getPath().toString();// 文件路径
-
             System.out.println(isDir + "\t" + permission
                     + "\t" + replication
                     + "\t" + len
                     + "\t" + path);
-
             BlockLocation[] blockLocations = fileStatus.getBlockLocations();
             for (BlockLocation blockLocation : blockLocations) {
                 String[] hosts = blockLocation.getHosts();
@@ -90,7 +87,6 @@ public class HDFSApp02 {
             }
         }
     }
-
 
     /**
      * 删除操作
@@ -106,26 +102,20 @@ public class HDFSApp02 {
      */
     @Test
     public void copyFromLocalIO() throws Exception {
-
-        BufferedInputStream in = new BufferedInputStream(new FileInputStream(new File("data/wc.data")));
+        BufferedInputStream in = new BufferedInputStream(Files.newInputStream(new File("data/wc.data").toPath()));
         FSDataOutputStream out = fileSystem.create(new Path("/hdfsapi/wc-io.data"));
-
         // 流的拷贝
         IOUtils.copyBytes(in, out, 4096);
-
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
     }
 
-
     @Test
     public void copyToLocalIO() throws Exception {
         FSDataInputStream in = fileSystem.open(new Path("/hdfsapi/wc-io.data"));
-        FileOutputStream out = new FileOutputStream(new File("out/b.txt"));
-
+        FileOutputStream out = new FileOutputStream("out/b.txt");
         // 流的拷贝
         IOUtils.copyBytes(in, out, 4096);
-
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
     }
