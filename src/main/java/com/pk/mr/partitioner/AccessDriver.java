@@ -31,7 +31,7 @@ public class AccessDriver {
         job.setOutputValueClass(Access.class);
         // 设置自定义分区规则
         job.setPartitionerClass(AccessPartitioner.class);
-        job.setNumReduceTasks(2);
+        job.setNumReduceTasks(3);
         /*
          * reduce数量和分区数量(3)的关系
          * 1）reduce数量 = partition数量   3个文件

@@ -30,7 +30,7 @@ public class WordCountCombinerDriver {
         job.setMapperClass(WordCountMapper.class);
         job.setReducerClass(WordCountReducer.class);
         // 设置Combiner类
-        job.setCombinerClass(WordCountReducer.class);
+        job.setCombinerClass(WordCountCombiner.class);
         // 设置Mapper的输出数据的KEY和VALUE类型
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
