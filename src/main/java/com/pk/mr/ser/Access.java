@@ -7,10 +7,18 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 public class Access implements Writable {
-
     private String phone;
+    /**
+     * 上行流量
+     */
     private long up;
+    /**
+     * 下行流量
+     */
     private long down;
+    /**
+     * 综合
+     */
     private long sum;
 
 

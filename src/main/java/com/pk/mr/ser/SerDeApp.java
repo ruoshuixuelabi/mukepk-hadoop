@@ -8,7 +8,6 @@ import java.io.*;
 public class SerDeApp {
 
     public static void main(String[] args) throws Exception {
-
 //        Person person = new Person(1, "PK哥", 100.0, 31);
 //        ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("ser/person.obj"));
 //        out.writeObject(person);
@@ -17,27 +16,25 @@ public class SerDeApp {
 //        ObjectInputStream in = new ObjectInputStream(new FileInputStream("ser/person.obj"));
 //        Person p = (Person) in.readObject();
 //        System.out.println(p);
-
-
         Person person = new Person(1, "PK哥", 100.0, 31);
         DataOutputStream out = new DataOutputStream(new FileOutputStream("ser/person2.obj"));
         out.writeInt(person.getId());
         out.writeUTF(person.getName());
         out.close();
-
         // 这里一定要注意：上面以什么顺序写出去，这里就要以什么顺序读进来
         DataInputStream in = new DataInputStream(new FileInputStream("ser/person2.obj"));
-
         int id = in.readInt();
         String name = in.readUTF();
-        System.out.println("id:"+id + ", name:" + name);
-
+        System.out.println("id:" + id + ", name:" + name);
         double salary = in.readDouble();
         System.out.println(salary);
     }
 }
 
-class Person {
+/**
+ * 使用DataOutputStream的时候可以不实现 Serializable 接口
+ */
+class Person implements Serializable {
     private int id;
     private String name;
     private double salary;

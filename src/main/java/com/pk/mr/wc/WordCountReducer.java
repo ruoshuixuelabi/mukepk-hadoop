@@ -17,11 +17,11 @@ public class WordCountReducer extends Reducer<Text, IntWritable, Text, IntWritab
      * <p>
      * pk,pk,pk    hello,hello   world
      * <p>
-     * <pk,1> <pk,1> <pk,1> ==> <pk,<1,1,1>>
+     * < pk,1> < pk,1> < pk,1> ==> < pk,<1,1,1>>
      * <p>
-     * <hello,1> <hello,1> ==> <hello, <1,1>>
+     * < hello,1> < hello,1> ==> < hello, <1,1>>
      * <p>
-     * <world,1>==> <world, <1>>
+     * < world,1>==> < world, <1>>
      * <p>
      * 相同的key经过shuffle之后，会在同一个reduce中进行聚合
      * <p>

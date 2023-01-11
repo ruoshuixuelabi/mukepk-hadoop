@@ -1,12 +1,10 @@
 package com.pk.pattern.template;
 
 public abstract class Mapper {
-
     /**
      * 初始化方法
      */
     abstract void setup();
-
 
     /**
      * 资源释放方法
