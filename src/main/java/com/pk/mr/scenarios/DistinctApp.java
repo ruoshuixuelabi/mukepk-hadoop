@@ -49,13 +49,13 @@ public class DistinctApp {
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String[] splits = value.toString().split(",");
-            for(String word :  splits) {
+            for (String word : splits) {
                 context.write(new Text(word), NullWritable.get());
             }
         }
     }
 
-    public static class MyReducer extends Reducer<Text, NullWritable,Text, NullWritable> {
+    public static class MyReducer extends Reducer<Text, NullWritable, Text, NullWritable> {
         @Override
         protected void reduce(Text key, Iterable<NullWritable> values, Context context) throws IOException, InterruptedException {
             context.write(key, NullWritable.get());

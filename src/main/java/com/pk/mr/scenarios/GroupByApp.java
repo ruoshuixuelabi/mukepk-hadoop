@@ -1,8 +1,5 @@
 package com.pk.mr.scenarios;
 
-import com.pk.mr.wc.WordCountDriver;
-import com.pk.mr.wc.WordCountMapper;
-import com.pk.mr.wc.WordCountReducer;
 import com.pk.utils.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -18,9 +15,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.IOException;
 
 public class GroupByApp {
-
     public static void main(String[] args) throws Exception {
-        String input = "data/emp.txt";
+        String input = "data/join/emp.txt";
         String output = "out";
 
         Configuration configuration = new Configuration();
@@ -47,13 +43,12 @@ public class GroupByApp {
     }
 
     public static class MyMapper extends Mapper<LongWritable, Text, IntWritable, IntWritable> {
-
         IntWritable ONE = new IntWritable(1);
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String[] splits = value.toString().split("\t");
-            if(8 == splits.length) { // 符合数据要求的
+            if (8 == splits.length) { // 符合数据要求的
                 int deptno = Integer.parseInt(splits[7].trim());
                 context.write(new IntWritable(deptno), ONE);
             }
@@ -64,10 +59,9 @@ public class GroupByApp {
         @Override
         protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
             int count = 0;
-            for(IntWritable value : values) {
+            for (IntWritable value : values) {
                 count += value.get();
             }
-
             context.write(key, new IntWritable(count));
         }
     }

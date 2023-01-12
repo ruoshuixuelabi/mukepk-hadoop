@@ -47,66 +47,53 @@ public class ReduceJoinApp {
     }
 
     public static class MyMapper extends Mapper<LongWritable, Text, IntWritable, Info> {
-
         String name;
-
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
-            FileSplit fileSplit = (FileSplit)context.getInputSplit();
+            FileSplit fileSplit = (FileSplit) context.getInputSplit();
             name = fileSplit.getPath().toString();
-
             System.out.println("=====" + name);
         }
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String[] splits = value.toString().split("\t");
-
             if (name.contains("emp")) { // 来自于emp
                 int empno = Integer.parseInt(splits[0].trim());
                 String ename = splits[1].trim();
                 int deptno = Integer.parseInt(splits[7].trim());
-
                 Info info = new Info();
                 info.setEmpno(empno);
                 info.setEname(ename);
                 info.setDeptno(deptno);
                 info.setDname("");
                 info.setFlag(1);
-
                 context.write(new IntWritable(deptno), info);
-
             } else {  // 来自于dept
                 Info info = new Info();
                 int deptno = Integer.parseInt(splits[0].trim());
                 String dname = splits[1].trim();
-
                 info.setDeptno(deptno);
                 info.setDname(dname);
                 info.setEmpno(0);
                 info.setEname("");
                 info.setFlag(2);
-
                 context.write(new IntWritable(deptno), info);
             }
-
         }
     }
 
-    public static class MyReducer extends Reducer<IntWritable, Info,Info, NullWritable> {
+    public static class MyReducer extends Reducer<IntWritable, Info, Info, NullWritable> {
         @Override
         protected void reduce(IntWritable key, Iterable<Info> values, Context context) throws IOException, InterruptedException {
-
             ArrayList<Info> infos = new ArrayList<>();
             String dname = "";
-            for(Info info : values) {
-                if(info.getFlag() == 1) {    // emp
-
-                    /**
+            for (Info info : values) {
+                if (info.getFlag() == 1) {    // emp
+                    /*
                      * 此处一定要new一个新的Info对象
                      * 否则结果不对
-                     *
                      * 如果不对？为什么不对？
                      */
                     Info tmp = new Info();
@@ -114,12 +101,12 @@ public class ReduceJoinApp {
                     tmp.setEname(info.getEname());
                     tmp.setDeptno(info.getDeptno());
                     infos.add(tmp);
-                } else if(info.getFlag() == 2) {  // dept
+                } //
+                else if (info.getFlag() == 2) {  // dept
                     dname = info.getDname();
                 }
             }
-
-            for(Info bean : infos) {
+            for (Info bean : infos) {
                 bean.setDname(dname);
                 context.write(bean, NullWritable.get());
             }

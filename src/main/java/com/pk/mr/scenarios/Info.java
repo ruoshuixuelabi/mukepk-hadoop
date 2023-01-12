@@ -1,10 +1,13 @@
 package com.pk.mr.scenarios;
 
+import lombok.Data;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+@Data
 
 public class Info implements Writable {
 
@@ -34,46 +37,6 @@ public class Info implements Writable {
 
     @Override
     public String toString() {
-        return empno + "\t" + ename  + "\t" +  deptno  + "\t" +  dname;
-    }
-
-    public int getEmpno() {
-        return empno;
-    }
-
-    public void setEmpno(int empno) {
-        this.empno = empno;
-    }
-
-    public String getEname() {
-        return ename;
-    }
-
-    public void setEname(String ename) {
-        this.ename = ename;
-    }
-
-    public int getDeptno() {
-        return deptno;
-    }
-
-    public void setDeptno(int deptno) {
-        this.deptno = deptno;
-    }
-
-    public String getDname() {
-        return dname;
-    }
-
-    public void setDname(String dname) {
-        this.dname = dname;
-    }
-
-    public int getFlag() {
-        return flag;
-    }
-
-    public void setFlag(int flag) {
-        this.flag = flag;
+        return empno + "\t" + ename + "\t" + deptno + "\t" + dname;
     }
 }

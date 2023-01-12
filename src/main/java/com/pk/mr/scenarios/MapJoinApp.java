@@ -18,6 +18,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,45 +55,35 @@ public class MapJoinApp {
     }
 
     public static class MyMapper extends Mapper<LongWritable, Text, Info, NullWritable> {
-
         // deptno ==> dname
-        Map<String,String> cache = new HashMap();
+        Map<String, String> cache = new HashMap<>();
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
             URI[] cacheFiles = context.getCacheFiles();
             String path = cacheFiles[0].getPath();
-
             BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(
-                            new FileInputStream(path), "UTF-8"));
-
+                    new InputStreamReader(Files.newInputStream(Paths.get(path)), StandardCharsets.UTF_8));
             String line;
             while (StringUtils.isNotEmpty(line = reader.readLine())) {
                 String[] splits = line.split("\t");
                 cache.put(splits[0].trim(), splits[1].trim());
             }
-
             IOUtils.closeStream(reader);
         }
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String[] splits = value.toString().split("\t"); // 大表的数据   emp.txt
-
             int empno = Integer.parseInt(splits[0].trim());
             String ename = splits[1].trim();
             int deptno = Integer.parseInt(splits[7].trim());
-
             Info info = new Info();
             info.setEmpno(empno);
             info.setEname(ename);
             info.setDeptno(deptno);
-
             info.setDname(cache.get(deptno + ""));
-
             context.write(info, NullWritable.get());
         }
     }
-
 }
