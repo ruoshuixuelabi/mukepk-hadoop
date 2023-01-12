@@ -20,6 +20,11 @@
         <spark.version>3.3.1</spark.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.24</version>
+        </dependency>
         <!--Hadoop的依赖包-->
         <dependency>
             <groupId>org.apache.hadoop</groupId>

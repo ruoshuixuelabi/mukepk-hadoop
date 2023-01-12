@@ -26,7 +26,9 @@ public class AccessPartitionSortDriver {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Access.class);
+        //设置分区器
         job.setPartitionerClass(AccessSortPartitioner.class);
+        //分区器是3个分区,这里设置3个任务
         job.setNumReduceTasks(3);
         FileInputFormat.setInputPaths(job, new Path(input));
         FileOutputFormat.setOutputPath(job, new Path(output));

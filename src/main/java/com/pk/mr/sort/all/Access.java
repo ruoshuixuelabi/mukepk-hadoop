@@ -1,12 +1,18 @@
 package com.pk.mr.sort.all;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-public class Access implements WritableComparable<Access>{
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Access implements WritableComparable<Access> {
     private String phone;
     private long up;
     private long down;
@@ -21,42 +27,7 @@ public class Access implements WritableComparable<Access>{
 
     @Override
     public String toString() {
-        return phone + "\t" + up  + "\t" + down  + "\t" + sum;
-    }
-
-    public Access() {
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public long getUp() {
-        return up;
-    }
-
-    public void setUp(long up) {
-        this.up = up;
-    }
-
-    public long getDown() {
-        return down;
-    }
-
-    public void setDown(long down) {
-        this.down = down;
-    }
-
-    public long getSum() {
-        return sum;
-    }
-
-    public void setSum(long sum) {
-        this.sum = sum;
+        return phone + "\t" + up + "\t" + down + "\t" + sum;
     }
 
     @Override
