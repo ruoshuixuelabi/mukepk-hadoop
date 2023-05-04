@@ -1,0 +1,27 @@
+隐式转换
+        Spark/Scala     这是一个非常常见的考题
+        Spark源码里面       是       非常非常非常      多的
+
+File类中是没有read方法的，要求你提供一个read方法
+Java:动态代理
+Scala:隐式转换
+        偷偷的(隐式)对现有功能进行增强(转换)
+
+模式匹配
+Java：switch case
+
+你的择偶标准:
+        颜值?
+        矿?
+        腿?
+        ...
+值、类型、Array、 List、 class、object、case  class、Option . . .
+Spark：
+xxx match {
+        case 值  =>
+        case 值  =>
+        case 值  =>
+        case  _   =>
+}
+_:没有匹配上，走的就是这个分支
+

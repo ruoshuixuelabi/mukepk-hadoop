@@ -36,5 +36,9 @@ object HelloScala {
     println("PK哥...")
     /* 多行注释 */
     val teacher = "PK哥"
+    val a = 10 / 3
+    val b: Double = 10 / 3
+    val c = 10.0 / 3
+    val d = 10 % 3
   }
 }
